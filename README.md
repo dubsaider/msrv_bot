@@ -33,7 +33,7 @@
 1.  Клонируйте репозиторий:
     ```bash
     git clone https://github.com/dubsaider/msrv_bot.git
-    cd your-repo-name
+    cd msrv_bot
     ```
 
 2.  Создайте файл `.env`:
