@@ -1,19 +1,20 @@
 import logging
 from aiogram import types
-import re
 
-from constants.pasha_mentions import (
-    PASHA_MENTION_PATTERNS,
-    PASHA_MENTION_THRESHOLD,
-    PASHA_THANKS_MESSAGE
+from constants.mention_config import (
+    ALL_MENTION_PATTERNS,
+    GLOBAL_MENTION_THRESHOLD,
+    generate_thanks_message
 )
 
-pasha_mention_counts = {}
+mention_counts = {}
 
-async def process_pasha_mention(message: types.Message):
+async def process_mentions(message: types.Message):
     """
-    Обрабатывает текстовые сообщения, ищет упоминания "Паша" (учитывая множественные вхождения)
-    и отправляет сообщение #СпасибоПаша при достижении порога.
+    Обрабатывает текстовые сообщения, ищет упоминания настроенных имен (Паша, Захар, Дед и т.д.).
+    Все найденные упоминания увеличивают *единый* счетчик для чата.
+    При достижении порога отправляет сообщение #Спасибо<Имя>,
+    где <Имя> - это базовое имя последнего распознанного слова из текущего сообщения.
     """
     if message.chat.type not in [types.ChatType.GROUP, types.ChatType.SUPERGROUP]:
         return
@@ -22,21 +23,32 @@ async def process_pasha_mention(message: types.Message):
     if not user_text:
         return
 
+    chat_id = message.chat.id
+    
+    current_total_count = mention_counts.get(chat_id, 0)
+
     total_mentions_in_message = 0
-    for pattern in PASHA_MENTION_PATTERNS:
+    last_matched_base_name = None
+
+    for base_name, pattern in ALL_MENTION_PATTERNS:
         matches = pattern.findall(user_text)
-        total_mentions_in_message += len(matches)
+        if matches:
+            total_mentions_in_message += len(matches)
+            last_matched_base_name = base_name
 
     if total_mentions_in_message > 0:
-        chat_id = message.chat.id
+        mention_counts[chat_id] = current_total_count + total_mentions_in_message
         
-        pasha_mention_counts[chat_id] = pasha_mention_counts.get(chat_id, 0) + total_mentions_in_message
-        
-        current_count = pasha_mention_counts[chat_id]
-        logging.info(f"Pasha mention(s) detected in chat {chat_id}. Added {total_mentions_in_message}. Current count: {current_count}/{PASHA_MENTION_THRESHOLD}")
+        new_total_count = mention_counts[chat_id]
+        logging.info(f"Chat {chat_id}: Total mention(s) detected. Added {total_mentions_in_message}. Current total count: {new_total_count}/{GLOBAL_MENTION_THRESHOLD}")
 
-        if current_count >= PASHA_MENTION_THRESHOLD:
-            logging.info(f"Pasha mention threshold reached in chat {chat_id}. Sending '{PASHA_THANKS_MESSAGE}'.")
-            await message.reply(PASHA_THANKS_MESSAGE)
+        if new_total_count >= GLOBAL_MENTION_THRESHOLD:
+            logging.info(f"Chat {chat_id}: Global mention threshold reached ({new_total_count}/{GLOBAL_MENTION_THRESHOLD}).")
             
-            pasha_mention_counts[chat_id] = 0
+            name_to_thank = last_matched_base_name if last_matched_base_name else "Generic" 
+            
+            thanks_message = generate_thanks_message(name_to_thank)
+            await message.reply(thanks_message)
+            
+            mention_counts[chat_id] = 0
+            logging.info(f"Chat {chat_id}: Global counter reset to 0.")

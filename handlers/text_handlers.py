@@ -2,7 +2,7 @@ import logging
 from aiogram import types
 
 from constants.answers import ANSWERS
-from handlers.pasha_counter_handler import process_pasha_mention 
+from handlers.pasha_counter_handler import process_mentions 
 
 async def handle_text_message(message: types.Message):
     """
@@ -11,7 +11,7 @@ async def handle_text_message(message: types.Message):
     """
     logging.info(f"Received text message from {message.from_user.full_name}: {message.text}")
 
-    await process_pasha_mention(message)
+    await process_mentions(message)
 
     user_text_lower = message.text.lower()
     
