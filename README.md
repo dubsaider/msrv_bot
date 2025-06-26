@@ -32,7 +32,7 @@
 
 1.  Клонируйте репозиторий:
     ```bash
-    git clone https://github.com/your-username/your-repo-name.git # Замените на актуальный URL
+    git clone https://github.com/dubsaider/msrv_bot.git
     cd your-repo-name
     ```
 
